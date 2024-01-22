@@ -11,17 +11,64 @@ const inputDuration = document.querySelector('.form__input--duration');
 const inputCadence = document.querySelector('.form__input--cadence');
 const inputElevation = document.querySelector('.form__input--elevation');
 
+class Workout {
+  date = new Date();
+  id = (Date.now() + '').slice(-10);
+
+  constructor(coords, distance, duration) {
+    this.coords = coords;
+    this.distance = distance; // in km
+    this.duration = duration; // in min
+  }
+}
+
+class Running extends Workout {
+  constructor(coords, distance, duration, cadence) {
+    super(coords, distance, duration);
+    this.cadence = cadence;
+    this.calcPace();
+  }
+
+  calcPace() {
+    // min/km
+    this.pace = this.duration / this.distance;
+    return this.pace;
+  }
+}
+
+class Cycling extends Workout {
+  constructor(coords, distance, duration, elevationGain) {
+    super(coords, distance, duration);
+    this.inputElevationGain = elevationGain;
+    this.calcSpeed();
+  }
+
+  calcSpeed() {
+    // km/h
+    this.speed = this.distance / (this.duration / 60);
+    return this.speed;
+  }
+}
+
+// ========   TEST DATA   ========
+// const run1 = new Running([39, -1], 5.2, 24, 178);
+// const cycling1 = new Cycling([39, -1], 27, 95, 523);
+// console.log(run1, cycling1);
+
+// =================================
+// ========   Application   ========
+// =================================
+
 class App {
   #map;
   #mapEvent;
   constructor() {
     this._getPosition();
-
     form.addEventListener('submit', this._netWorkout.bind(this));
-
     inputType.addEventListener('change', this._toggleElevationField);
   }
 
+  // =========   GETTING MAP LOCATION   =========
   _getPosition() {
     if (navigator.geolocation)
       navigator.geolocation.getCurrentPosition(
@@ -31,6 +78,8 @@ class App {
         }
       );
   }
+
+  // =========   LOADING THE MAP   =========
 
   _loadMap(position) {
     const { latitude } = position.coords;
@@ -48,17 +97,22 @@ class App {
     this.#map.on('click', this._showForm.bind(this));
   }
 
+  // =========   DISPLAY THE FORM   =========
+
   _showForm(mapE) {
     this.#mapEvent = mapE;
     form.classList.remove('hidden');
     inputDistance.focus();
   }
 
+  // =========   SWITCHING BETWEEN ELEVATION AND CADENCE    =========
+
   _toggleElevationField() {
     inputElevation.closest('.form__row').classList.toggle('form__row--hidden');
     inputCadence.closest('.form__row').classList.toggle('form__row--hidden');
   }
 
+  // =========   FORM SUBMISSION   =========
   _netWorkout(e) {
     e.preventDefault();
 
