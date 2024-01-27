@@ -224,7 +224,7 @@ class App {
   _renderWorkoutMarker(workout) {
     const markerIconColer = L.icon({
       iconUrl: `${workout.type === 'running' ? 'green.png' : 'orange.png'}`,
-      iconSize: [85, 95],
+      iconSize: [75, 85],
     });
 
     L.marker(workout.coords, { icon: markerIconColer })
