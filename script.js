@@ -1,5 +1,9 @@
 'use strict';
 
+console.log(
+  'Hello!, if you would like to reset the workouts just call app.reset()'
+);
+
 class Workout {
   date = new Date();
   id = (Date.now() + '').slice(-10);
@@ -218,7 +222,12 @@ class App {
   }
 
   _renderWorkoutMarker(workout) {
-    L.marker(workout.coords)
+    const markerIconColer = L.icon({
+      iconUrl: `${workout.type === 'running' ? 'green.png' : 'orange.png'}`,
+      iconSize: [85, 95],
+    });
+
+    L.marker(workout.coords, { icon: markerIconColer })
       .addTo(this.#map)
       .bindPopup(
         L.popup({
