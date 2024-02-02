@@ -79,13 +79,13 @@ const inputDistance = document.querySelector('.form__input--distance');
 const inputDuration = document.querySelector('.form__input--duration');
 const inputCadence = document.querySelector('.form__input--cadence');
 const inputElevation = document.querySelector('.form__input--elevation');
-const closeWorkout = document.querySelector('.workout__close');
 
 class App {
   #map;
   #mapZoomLevel = 13;
   #mapEvent;
   #workouts = [];
+  #workoutLayerGroup = L.layerGroup(); // New layer group
 
   constructor() {
     // Get user's position
@@ -98,7 +98,6 @@ class App {
     form.addEventListener('submit', this._netWorkout.bind(this));
     inputType.addEventListener('change', this._toggleElevationField);
     containerWorkouts.addEventListener('click', this._moveToPopup.bind(this));
-    closeWorkout.addEventListener('click', this.reset.bind(this));
   }
 
   _getPosition() {
@@ -126,11 +125,39 @@ class App {
     // Handling clicks on map
     this.#map.on('click', this._showForm.bind(this));
 
+    // Add layer group to map
+    this.#workoutLayerGroup.addTo(this.#map);
+
     this.#workouts.forEach(work => {
       this._renderWorkout(work);
       this._renderWorkoutMarker(work);
     });
   }
+
+  // _loadMap(position) {
+  //   const { latitude, longitude } = position.coords;
+  //   const coords = [latitude, longitude];
+
+  //   this.#map = L.map('map').setView(coords, this.#mapZoomLevel);
+  //   L.tileLayer('https://tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+  //     attribution:
+  //       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  //   }).addTo(this.#map);
+
+  //   // Handling clicks on map
+  //   this.#map.on('click', this._showForm.bind(this));
+
+  //   // Add layer group to map
+  //   this.#workoutLayerGroup.addTo(this.#map);
+
+  //   // Render existing workouts on the map/UI
+  //   this._getLocalStorage();
+
+  //   this.#workouts.forEach(workout => {
+  //     this._renderWorkoutMarker(workout);
+  //     this._renderWorkout(workout);
+  //   });
+  // }
 
   _showForm(mapE) {
     this.#mapEvent = mapE;
@@ -210,7 +237,7 @@ class App {
     });
 
     L.marker(workout.coords, { icon: markerIconColer })
-      .addTo(this.#map)
+      .addTo(this.#workoutLayerGroup) // Add to the layer group
       .bindPopup(
         L.popup({
           maxWidth: 250,
@@ -223,7 +250,7 @@ class App {
       .setPopupContent(
         ` ${workout.type === 'running' ? '🏃‍♂️' : '🚴‍♀️'} ${workout.description}`
       )
-      .openPopup();
+      .openPopup().options.workoutId = workout.id; // Setting custom property
   }
 
   _renderWorkout(workout) {
@@ -231,7 +258,7 @@ class App {
       <li class="workout workout--${workout.type}" data-id="${workout.id}">
       
       <div class="workout workout__topTitle">
-      <div class="workout__title">Running on April 14</div>
+      <div class="workout__title">${workout.description}</div>
       <div class="workout__close">❌</div>
     </div>
 
@@ -281,6 +308,11 @@ class App {
       `;
 
     containerWorkouts.insertAdjacentHTML('beforeend', html);
+
+    const closeWorkout = document.querySelector(
+      `.workout[data-id="${workout.id}"] .workout__close`
+    );
+    closeWorkout.addEventListener('click', () => this.reset(workout.id));
   }
 
   _moveToPopup(e) {
@@ -292,12 +324,14 @@ class App {
       work => work.id === workoutEl.dataset.id
     );
 
-    this.#map.setView(workout.coords, this.#mapZoomLevel, {
-      animate: true,
-      pan: {
-        duration: 1,
-      },
-    });
+    if (workout && workout.coords) {
+      this.#map.setView(workout.coords, this.#mapZoomLevel, {
+        animate: true,
+        pan: {
+          duration: 1,
+        },
+      });
+    }
   }
 
   _setLocalStorage() {
@@ -316,55 +350,74 @@ class App {
     });
   }
 
-  reset() {
-    localStorage.removeItem('workouts');
-    location.reload();
+  reset(workoutId) {
+    // Remove the workout from the layer group
+    const workoutMarker = this.#workoutLayerGroup
+      .getLayers()
+      .find(layer => layer.options.workoutId === workoutId);
+    if (workoutMarker) {
+      this.#workoutLayerGroup.removeLayer(workoutMarker);
+    }
+
+    // Remove the workout from the list of workouts
+    this.#workouts = this.#workouts.filter(workout => workout.id !== workoutId);
+
+    // Update the local storage
+    this._setLocalStorage();
+
+    // Remove the workout from the UI
+    const workoutElement = document.querySelector(
+      `.workout[data-id="${workoutId}"]`
+    );
+    if (workoutElement) {
+      workoutElement.remove();
+    }
   }
 }
 
 const app = new App();
 
-// // ==============
-// // This is a great example of using the rest operator ...
-// // This gives me validation through the helper functions at the top and allows me to make it dynamic
-// // ==============
+// // // ==============
+// // // This is a great example of using the rest operator ...
+// // // This gives me validation through the helper functions at the top and allows me to make it dynamic
+// // // ==============
 
-// // // ======  helper functions  ======
+// // // // ======  helper functions  ======
 
-// // // so this one checks if the input is a number
-// // const validInputs = (...inputs) => inputs.every(inp => Number.isFinite(inp));
+// // // // so this one checks if the input is a number
+// // // const validInputs = (...inputs) => inputs.every(inp => Number.isFinite(inp));
 
-// // // this checks if the number is a positive number
-// // const allPositive = (...inputs) => inputs.every(inp => inp > 0);
+// // // // this checks if the number is a positive number
+// // // const allPositive = (...inputs) => inputs.every(inp => inp > 0);
 
-// // e.preventDefault();
+// // // e.preventDefault();
 
-// // // Get data from form
-// // const type = inputType.value;
-// // const distance = +inputDistance.value;
-// // const duration = +inputDuration.value;
+// // // // Get data from form
+// // // const type = inputType.value;
+// // // const distance = +inputDistance.value;
+// // // const duration = +inputDuration.value;
 
-// // // If workout is running, create running object
-// // if (type === 'running') {
-// //   const cadence = +inputCadence.value;
-// //   // Check if data is valid
-// //   if (
-// //     // !Number.isFinite(distance) ||
-// //     // !Number.isFinite(duration) ||
-// //     // !Number.isFinite(cadence)
-// //     !validInputs(distance, duration, cadence) ||
-// //     !allPositive(distance, duration, cadence)
-// //   )
-// //     return alert('Inputs have to be positive numbers!');
-// // }
+// // // // If workout is running, create running object
+// // // if (type === 'running') {
+// // //   const cadence = +inputCadence.value;
+// // //   // Check if data is valid
+// // //   if (
+// // //     // !Number.isFinite(distance) ||
+// // //     // !Number.isFinite(duration) ||
+// // //     // !Number.isFinite(cadence)
+// // //     !validInputs(distance, duration, cadence) ||
+// // //     !allPositive(distance, duration, cadence)
+// // //   )
+// // //     return alert('Inputs have to be positive numbers!');
+// // // }
 
-// // // If workout is cycling, create cycling object
-// // if (type === 'cycling') {
-// //   const elevation = +inputElevation.value;
+// // // // If workout is cycling, create cycling object
+// // // if (type === 'cycling') {
+// // //   const elevation = +inputElevation.value;
 
-// //   if (
-// //     !validInputs(distance, duration, elevation) ||
-// //     !allPositive(distance, duration)
-// //   )
-// //     return alert('Inputs have to be positive numbers!');
-// // }
+// // //   if (
+// // //     !validInputs(distance, duration, elevation) ||
+// // //     !allPositive(distance, duration)
+// // //   )
+// // //     return alert('Inputs have to be positive numbers!');
+// // // }
