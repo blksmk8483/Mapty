@@ -16,8 +16,20 @@ class Workout {
   }
 
   _setDescription() {
-    // prettier-ignore
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
 
     this.description = `${this.type[0].toUpperCase()}${this.type.slice(1)} on ${
       months[this.date.getMonth()]
@@ -40,7 +52,6 @@ class Running extends Workout {
   }
 
   calcPace() {
-    // min/km
     this.pace = this.duration / this.distance;
     return this.pace;
   }
@@ -56,20 +67,10 @@ class Cycling extends Workout {
   }
 
   calcSpeed() {
-    // km/h
     this.speed = this.distance / (this.duration / 60);
     return this.speed;
   }
 }
-
-// ========   TEST DATA   ========
-// const run1 = new Running([39, -1], 5.2, 24, 178);
-// const cycling1 = new Cycling([39, -1], 27, 95, 523);
-// console.log(run1, cycling1);
-
-// =================================
-// ========   Application   ========
-// =================================
 
 const form = document.querySelector('.form');
 const containerWorkouts = document.querySelector('.workouts');
@@ -78,6 +79,7 @@ const inputDistance = document.querySelector('.form__input--distance');
 const inputDuration = document.querySelector('.form__input--duration');
 const inputCadence = document.querySelector('.form__input--cadence');
 const inputElevation = document.querySelector('.form__input--elevation');
+const closeWorkout = document.querySelector('.workout__close');
 
 class App {
   #map;
@@ -96,9 +98,9 @@ class App {
     form.addEventListener('submit', this._netWorkout.bind(this));
     inputType.addEventListener('change', this._toggleElevationField);
     containerWorkouts.addEventListener('click', this._moveToPopup.bind(this));
+    closeWorkout.addEventListener('click', this.reset.bind(this));
   }
 
-  // =========   GETTING MAP LOCATION   =========
   _getPosition() {
     if (navigator.geolocation)
       navigator.geolocation.getCurrentPosition(
@@ -108,8 +110,6 @@ class App {
         }
       );
   }
-
-  // =========   LOADING THE MAP   =========
 
   _loadMap(position) {
     const { latitude } = position.coords;
@@ -132,8 +132,6 @@ class App {
     });
   }
 
-  // =========   DISPLAY THE FORM   =========
-
   _showForm(mapE) {
     this.#mapEvent = mapE;
     form.classList.remove('hidden');
@@ -141,7 +139,6 @@ class App {
   }
 
   _hideForm() {
-    // empty inputs
     inputDistance.value =
       inputDuration.value =
       inputCadence.value =
@@ -153,38 +150,28 @@ class App {
     setTimeout(() => (form.style.display = 'grid'), 1000);
   }
 
-  // =========   SWITCHING BETWEEN ELEVATION AND CADENCE    =========
-
   _toggleElevationField() {
     inputElevation.closest('.form__row').classList.toggle('form__row--hidden');
     inputCadence.closest('.form__row').classList.toggle('form__row--hidden');
   }
 
-  // =========   FORM SUBMISSION   =========
   _netWorkout(e) {
-    // validInputs is a helper function that uses the rest operator to loop through (distance, duration, cadence) to validate whether or not they are Numbers
     const validInputs = (...inputs) =>
       inputs.every(inp => Number.isFinite(inp));
-
     const allPositive = (...inputs) => inputs.every(inp => inp > 0);
 
     e.preventDefault();
 
-    // Get data from form
     const type = inputType.value;
     const distance = +inputDistance.value;
     const duration = +inputDuration.value;
     const { lat, lng } = this.#mapEvent.latlng;
     let workout;
 
-    // If workout is running, create running object
     if (type === 'running') {
       const cadence = +inputCadence.value;
-      // Check if data is valid
+
       if (
-        // !Number.isFinite(distance) ||
-        // !Number.isFinite(duration) ||
-        // !Number.isFinite(cadence)
         !validInputs(distance, duration, cadence) ||
         !allPositive(distance, duration, cadence)
       )
@@ -193,7 +180,6 @@ class App {
       workout = new Running([lat, lng], distance, duration, cadence);
     }
 
-    // If workout is cycling, create cycling object
     if (type === 'cycling') {
       const elevation = +inputElevation.value;
 
@@ -205,19 +191,15 @@ class App {
 
       workout = new Cycling([lat, lng], distance, duration, elevation);
     }
-    // Add new ojbect to workout array
+
     this.#workouts.push(workout);
 
-    // Render workout on map as a marker
     this._renderWorkoutMarker(workout);
 
-    // Render workout on list
     this._renderWorkout(workout);
 
-    // Hide the form + Clearing the input fields
     this._hideForm();
 
-    // Set local storage to all workouts
     this._setLocalStorage();
   }
 
@@ -247,50 +229,58 @@ class App {
   _renderWorkout(workout) {
     let html = `
       <li class="workout workout--${workout.type}" data-id="${workout.id}">
-      <h2 class="workout__title">${workout.description}</h2>
+      
+      <div class="workout workout__topTitle">
+      <div class="workout__title">Running on April 14</div>
+      <div class="workout__close">❌</div>
+    </div>
+
+    <div class="workout__details-container">
       <div class="workout__details">
-        <span class="workout__icon">${
-          workout.type === 'running' ? '🏃‍♂️' : '🚴‍♀️'
-        }</span>
-        <span class="workout__value">${workout.distance}</span>
-        <span class="workout__unit">km</span>
-      </div>
-      <div class="workout__details">
-        <span class="workout__icon">⏱</span>
-        <span class="workout__value">${workout.duration}</span>
-        <span class="workout__unit">min</span>
-      </div>`;
+      <span class="workout__icon">${
+        workout.type === 'running' ? '🏃‍♂️' : '🚴‍♀️'
+      }</span>
+      <span class="workout__value">${workout.distance}</span>
+      <span class="workout__unit">km</span>
+    </div>
+    <div class="workout__details">
+      <span class="workout__icon">⏱</span>
+      <span class="workout__value">${workout.duration}</span>
+      <span class="workout__unit">min</span>
+    </div>`;
 
     if (workout.type === 'running')
       html += `
-        <div class="workout__details">
-            <span class="workout__icon">⚡️</span>
-            <span class="workout__value">${workout.pace.toFixed(1)}</span>
-            <span class="workout__unit">min/km</span>
-         </div>
-         <div class="workout__details">
-            <span class="workout__icon">🦶🏼</span>
-            <span class="workout__value">${workout.cadence}</span>
-            <span class="workout__unit">spm</span>
-        </div>
-      </li>`;
+      <div class="workout__details">
+          <span class="workout__icon">⚡️</span>
+          <span class="workout__value">${workout.pace.toFixed(1)}</span>
+          <span class="workout__unit">min/km</span>
+       </div>
+       <div class="workout__details">
+          <span class="workout__icon">🦶🏼</span>
+          <span class="workout__value">${workout.cadence}</span>
+          <span class="workout__unit">spm</span>
+      </div>
+      </div>
+    </li>`;
 
     if (workout.type === 'cycling')
       html += `
-        <div class="workout__details">
-            <span class="workout__icon">⚡️</span>
-            <span class="workout__value">${workout.speed.toFixed(1)}</span>
-            <span class="workout__unit">km/h</span>
-          </div>
-        <div class="workout__details">
-          <span class="workout__icon">⛰</span>
-          <span class="workout__value">${workout.elevationGain}</span>
-          <span class="workout__unit">m</span>
+      <div class="workout__details">
+          <span class="workout__icon">⚡️</span>
+          <span class="workout__value">${workout.speed.toFixed(1)}</span>
+          <span class="workout__unit">km/h</span>
         </div>
-      </li>
-        `;
+      <div class="workout__details">
+        <span class="workout__icon">⛰</span>
+        <span class="workout__value">${workout.elevationGain}</span>
+        <span class="workout__unit">m</span>
+      </div>
+      </div>
+    </li>
+      `;
 
-    form.insertAdjacentHTML('afterend', html);
+    containerWorkouts.insertAdjacentHTML('beforeend', html);
   }
 
   _moveToPopup(e) {
@@ -308,9 +298,6 @@ class App {
         duration: 1,
       },
     });
-
-    // using the pulic interface
-    // workout.click();
   }
 
   _setLocalStorage() {
@@ -337,47 +324,47 @@ class App {
 
 const app = new App();
 
-// ==============
-// This is a great example of using the rest operator ...
-// This gives me validation through the helper functions at the top and allows me to make it dynamic
-// ==============
+// // ==============
+// // This is a great example of using the rest operator ...
+// // This gives me validation through the helper functions at the top and allows me to make it dynamic
+// // ==============
 
-// // ======  helper functions  ======
+// // // ======  helper functions  ======
 
-// // so this one checks if the input is a number
-// const validInputs = (...inputs) => inputs.every(inp => Number.isFinite(inp));
+// // // so this one checks if the input is a number
+// // const validInputs = (...inputs) => inputs.every(inp => Number.isFinite(inp));
 
-// // this checks if the number is a positive number
-// const allPositive = (...inputs) => inputs.every(inp => inp > 0);
+// // // this checks if the number is a positive number
+// // const allPositive = (...inputs) => inputs.every(inp => inp > 0);
 
-// e.preventDefault();
+// // e.preventDefault();
 
-// // Get data from form
-// const type = inputType.value;
-// const distance = +inputDistance.value;
-// const duration = +inputDuration.value;
+// // // Get data from form
+// // const type = inputType.value;
+// // const distance = +inputDistance.value;
+// // const duration = +inputDuration.value;
 
-// // If workout is running, create running object
-// if (type === 'running') {
-//   const cadence = +inputCadence.value;
-//   // Check if data is valid
-//   if (
-//     // !Number.isFinite(distance) ||
-//     // !Number.isFinite(duration) ||
-//     // !Number.isFinite(cadence)
-//     !validInputs(distance, duration, cadence) ||
-//     !allPositive(distance, duration, cadence)
-//   )
-//     return alert('Inputs have to be positive numbers!');
-// }
+// // // If workout is running, create running object
+// // if (type === 'running') {
+// //   const cadence = +inputCadence.value;
+// //   // Check if data is valid
+// //   if (
+// //     // !Number.isFinite(distance) ||
+// //     // !Number.isFinite(duration) ||
+// //     // !Number.isFinite(cadence)
+// //     !validInputs(distance, duration, cadence) ||
+// //     !allPositive(distance, duration, cadence)
+// //   )
+// //     return alert('Inputs have to be positive numbers!');
+// // }
 
-// // If workout is cycling, create cycling object
-// if (type === 'cycling') {
-//   const elevation = +inputElevation.value;
+// // // If workout is cycling, create cycling object
+// // if (type === 'cycling') {
+// //   const elevation = +inputElevation.value;
 
-//   if (
-//     !validInputs(distance, duration, elevation) ||
-//     !allPositive(distance, duration)
-//   )
-//     return alert('Inputs have to be positive numbers!');
-// }
+// //   if (
+// //     !validInputs(distance, duration, elevation) ||
+// //     !allPositive(distance, duration)
+// //   )
+// //     return alert('Inputs have to be positive numbers!');
+// // }
